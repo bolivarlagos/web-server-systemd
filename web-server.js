@@ -26,6 +26,17 @@ const requestListener = (req, res) => {
 
             mailSender(fields, files)
 
+            fs.mkdir(__dirname + '/docs', (err) => {
+                
+                if(err){
+                    if(err.code === 'EEXIST'){
+                        console.log('This directory alread exists')
+                        return
+                    }
+                }
+                console.log('Directory successfully created')
+            })
+
             let tempFile = files.attachment.path 
             let newFile = docsFolder + files.attachment.name 
 
