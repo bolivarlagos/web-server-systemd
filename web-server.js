@@ -4,6 +4,10 @@ const formidable = require('formidable')
 
 const mailSender = require('./mailSender')
 const { home, docsFolder, port, listening, html } = require('./utils')
+const { handleLogs, handleErrorLogs } = require('./fileHandlers')
+
+const EventEmitter = require('events')
+const customEmitter = new EventEmitter()
 
 const requestListener = (req, res) => {
 
@@ -13,6 +17,7 @@ const requestListener = (req, res) => {
 
             if(err) throw new Error(err)
             res.writeHead(200, html)
+            customEmitter.emit('success', req)
             res.end(data)
         })
     }
@@ -26,16 +31,11 @@ const requestListener = (req, res) => {
 
             mailSender(fields, files)
 
-            fs.mkdir(__dirname + '/docs', (err) => {
-                
-                if(err){
-                    if(err.code === 'EEXIST'){
-                        console.log('This directory alread exists')
-                        return
-                    }
-                }
-                console.log('Directory successfully created')
-            })
+            if(fs.existsSync(docsFolder)){
+                console.log('This directory alread exists')                
+            } else {
+                fs.mkdirSync(docsFolder)
+            }          
 
             let tempFile = files.attachment.path 
             let newFile = docsFolder + files.attachment.name 
@@ -52,9 +52,13 @@ const requestListener = (req, res) => {
     }
     else {
         res.writeHead(404)
+        customEmitter.emit('error', req)
         res.end('Error')
     }
 }
 
 const server = http.createServer(requestListener)
 server.listen(port, listening)
+
+customEmitter.on('success', handleLogs)
+customEmitter.on('error', handleErrorLogs)
